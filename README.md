@@ -1,4 +1,4 @@
-# 🚀 Nexachain AI - Investment & Referral Dashboard Platform (MERN Stack Developer Assessment)
+# 🚀 YieldNexus - Investment & Referral Dashboard Platform (MERN Stack Developer Assessment)
 
 A complete MERN stack application featuring secure user authentication, an automated daily ROI distribution engine, a live profit history tracker, and a dynamic multi-level referral network system.
 
