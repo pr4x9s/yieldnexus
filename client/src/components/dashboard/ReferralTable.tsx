@@ -1,5 +1,5 @@
 import { useState, useMemo, useRef, useEffect } from 'react'
-import { columnFilteringFeature, columnVisibilityFeature, createColumnHelper, createFilteredRowModel, createSortedRowModel, filterFn_includesString, globalFilteringFeature, rowPaginationFeature, rowSelectionFeature, rowSortingFeature, tableFeatures, useTable, createPaginatedRowModel, type PaginationState, type SortingState } from '@tanstack/react-table'
+import { columnFilteringFeature, columnVisibilityFeature, createColumnHelper, createFilteredRowModel, filterFn_includesString, globalFilteringFeature, rowPaginationFeature, rowSelectionFeature, tableFeatures, useTable, createPaginatedRowModel, type PaginationState } from '@tanstack/react-table'
 import { useDirectReferrals } from '../../hooks/useDashboardData.ts'
 import { formatCurrency } from '../../utils/format.ts'
 import { format, formatDistanceToNow } from 'date-fns'
@@ -13,12 +13,10 @@ import Input from '../common/Input.tsx'
 const features = tableFeatures({
     columnFilteringFeature: columnFilteringFeature,
     globalFilteringFeature: globalFilteringFeature,
-    rowSortingFeature: rowSortingFeature,
     rowSelectionFeature: rowSelectionFeature,
     rowPaginationFeature: rowPaginationFeature,
     columnVisibilityFeature: columnVisibilityFeature,
     filteredRowModel: createFilteredRowModel(),
-    sortedRowModel: createSortedRowModel(),
     paginatedRowModel: createPaginatedRowModel(),
 });
 
@@ -28,7 +26,6 @@ const ReferralTable = () => {
     const { data: apiResponse, isLoading, isError } = useDirectReferrals();
     const [globalFilter, setGlobalFilter] = useState<string>('');
     const [debouncedFilter, setDebouncedFilter] = useState<string>('');
-    const [sorting, setSorting] = useState<SortingState>([]);
     const [pagination, setPagination] = useState<PaginationState>({
         pageIndex: 0,
         pageSize: 5
@@ -153,17 +150,11 @@ const ReferralTable = () => {
         columns,
         state: {
             globalFilter: debouncedFilter,
-            sorting,
             pagination,
         },
         globalFilterFn: filterFn_includesString,
         onGlobalFilterChange: setGlobalFilter,
-        onSortingChange: setSorting,
         onPaginationChange: setPagination,
-        // getCoreRowModel: getCoreRowModel(),
-        // getFilteredRowModel: getFilteredRowModel(),
-        // getPaginationRowModel: getPaginationRowModel(),
-        // initialState: { pagination: { pageSize: 5 } }
     });
 
     if (isLoading) {
