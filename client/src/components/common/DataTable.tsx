@@ -15,6 +15,7 @@ const DataTable = <TTable,>({
 	showPagination = true
 }: DataTableProps<TTable>) => {
 
+	// eslint-disable-next-line @typescript-eslint/no-explicit-any
 	const tableApi = table as ReactTable<any, any>;
 
 	const headerGroups = tableApi.getHeaderGroups();
