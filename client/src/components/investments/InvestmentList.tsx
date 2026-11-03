@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { useSearchParams } from 'react-router'
-import { createColumnHelper, getCoreRowModel, getFilteredRowModel, getPaginationRowModel, useReactTable } from '@tanstack/react-table'
+import { columnFilteringFeature, columnVisibilityFeature, createColumnHelper, createFilteredRowModel, filterFn_includesString, globalFilteringFeature, rowPaginationFeature, rowSelectionFeature, tableFeatures, useTable, createPaginatedRowModel, type PaginationState } from '@tanstack/react-table'
 import { useGetUserInvestments } from '../../hooks/useInvestments.ts'
 import { formatCurrency, formatPercentage } from '../../utils/format.ts'
 import { format, formatDistanceToNow } from 'date-fns'
@@ -13,7 +13,17 @@ import Input from '../common/Input.tsx'
 
 type FilterStatusTabs = Investment['investmentStatus'] | 'All';
 
-const columnHelper = createColumnHelper<Investment>();
+const features = tableFeatures({
+    columnFilteringFeature: columnFilteringFeature,
+    globalFilteringFeature: globalFilteringFeature,
+    rowSelectionFeature: rowSelectionFeature,
+    rowPaginationFeature: rowPaginationFeature,
+    columnVisibilityFeature: columnVisibilityFeature,
+    filteredRowModel: createFilteredRowModel(),
+    paginatedRowModel: createPaginatedRowModel(),
+});
+
+const columnHelper = createColumnHelper<typeof features,Investment>();
 
 
 const InvestmentList = () => {
@@ -21,6 +31,11 @@ const InvestmentList = () => {
 	const [searchParams, setSearchParams] = useSearchParams();
 	const [globalFilter, setGlobalFilter] = useState('');
 	const [debouncedFilter, setDebouncedFilter] = useState('');
+	const [pagination, setPagination] = useState<PaginationState>({
+		pageIndex: 0,
+		pageSize: 5
+	});
+
     const inputRef = useRef<HTMLInputElement>(null);
 
 	useEffect(() => {
@@ -84,118 +99,128 @@ const InvestmentList = () => {
 		}
 	};
 
-	const columns = useMemo(() => [
-			columnHelper.accessor('planDetails', {
-				header: 'Investment Allocation Details',
-				cell: (info) => (
+	const columns = columnHelper.columns([
+		columnHelper.accessor('planDetails', {
+			header: 'Investment Allocation Details',
+			cell: (info) => {
+				const investment = info.row.original;
+				return (
 					<div className='flex flex-col max-w-xs sm:max-w-sm md:max-w-md'>
 						<span
 							className='font-semibold text-zinc-900 dark:text-zinc-100 line-clamp-1 group-hover:line-clamp-none transition-all duration-300 wrap-break-word'
-							title={info.getValue()}
+							title={investment.planDetails}
 						>
-							{info.getValue()}
+							{investment.planDetails}
 						</span>
 						<span className='text-[10px] text-zinc-400 mt-1 font-mono'>
-							ID: {info.row.original._id}
+							ID: {investment._id}
 						</span>
 					</div>
-				),
-			}),
-			columnHelper.accessor('investmentAmount', {
-				header: 'Capital Invested',
-				cell: (info) => (
+				)
+			},
+		}),
+		columnHelper.accessor('investmentAmount', {
+			header: 'Capital Invested',
+			cell: (info) => {
+				const investment = info.row.original;
+				return (
 					<span
 						className='font-bold font-mono text-zinc-900 dark:text-zinc-50'
-						title={formatCurrency(info.getValue())}
+						title={formatCurrency(investment.investmentAmount)}
 					>
-						{formatCurrency(info.getValue())}
+						{formatCurrency(investment.investmentAmount)}
 					</span>
-				),
-			}),
-			columnHelper.accessor('dailyRoiPercentage', {
-				header: 'Daily ROI %',
-				cell: (info) => (
+				)
+			},
+		}),
+		columnHelper.accessor('dailyRoiPercentage', {
+			header: 'Daily ROI %',
+			cell: (info) => {
+				const investment = info.row.original;
+				return (
 					<span
 						className='font-bold text-emerald-600 dark:text-emerald-400'
-						title={formatPercentage(info.getValue())}
+						title={formatPercentage(investment.dailyRoiPercentage)}
 					>
-						{formatPercentage(info.getValue())}
+						{formatPercentage(investment.dailyRoiPercentage)}
 					</span>
-				),
-			}),
-			columnHelper.accessor('startDate', {
-				header: 'Start Date',
-				cell: (info) => {
-					return (
-						<div
-							className='flex flex-col text-xs text-zinc-500 dark:text-zinc-400 font-medium'
-							title={format(info.getValue(), 'PPPPpppp')}
-						>
-							<span>{format(info.getValue(), 'PP')}</span>
-							<span className='text-[10px] text-zinc-400 font-normal mt-0.5'>
-								(
+				)
+			},
+		}),
+		columnHelper.accessor('startDate', {
+			header: 'Start Date',
+			cell: (info) => {
+				const investment = info.row.original;
+				return (
+					<div
+						className='flex flex-col text-xs text-zinc-500 dark:text-zinc-400 font-medium'
+						title={format(investment.startDate, 'PPPPpppp')}
+					>
+						<span>{format(investment.startDate, 'PP')}</span>
+						<span className='text-[10px] text-zinc-400 font-normal mt-0.5'>
+							(
 								{formatDistanceToNow(
-									new Date(info.getValue()),
+									new Date(investment.startDate),
 									{ addSuffix: true, includeSeconds: true },
 								)}
-								)
-							</span>
-						</div>
-					);
-				},
-			}),
-			columnHelper.accessor('endDate', {
-				header: 'End Date',
-				cell: (info) => {
-					return (
-						<div
-							className='flex flex-col text-xs text-zinc-500 dark:text-zinc-400 font-medium'
-							title={format(info.getValue(), 'PPPPpppp')}
-						>
-							<span>{format(info.getValue(), 'PP')}</span>
-							<span className='text-[10px] text-zinc-400 font-normal mt-0.5'>
-								(
-								{formatDistanceToNow(
-									new Date(info.getValue()),
-									{ addSuffix: true, includeSeconds: true },
-								)}
-								)
-							</span>
-						</div>
-					);
-				},
-			}),
-			columnHelper.accessor('investmentStatus', {
-				header: 'Status',
-				cell: (info) => {
-					const status = info.getValue();
-					return (
-						<span
-							className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-medium border ${getStatusStyle(status)}`}
-							title={status}
-						>
-							<span
-								className={`size-1.5 rounded-full ${status === 'Active' ? 'bg-emerald-500' : status === 'Completed' ? 'bg-blue-500' : 'bg-red-400'}`}
-							/>
-							{status}
+							)
 						</span>
-					);
-				},
-			}),
-		],
-		[],
-	);
+					</div>
+				);
+			},
+		}),
+		columnHelper.accessor('endDate', {
+			header: 'End Date',
+			cell: (info) => {
+				const investment = info.row.original;
+				return (
+					<div
+						className='flex flex-col text-xs text-zinc-500 dark:text-zinc-400 font-medium'
+						title={format(investment.endDate, 'PPPPpppp')}
+					>
+						<span>{format(investment.endDate, 'PP')}</span>
+						<span className='text-[10px] text-zinc-400 font-normal mt-0.5'>
+							(
+								{formatDistanceToNow(
+									new Date(investment.endDate),
+									{ addSuffix: true, includeSeconds: true },
+								)}
+							)
+						</span>
+					</div>
+				);
+			},
+		}),
+		columnHelper.accessor('investmentStatus', {
+			header: 'Status',
+			cell: (info) => {
+				const investment = info.row.original;
+				return (
+					<span
+						className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-medium border ${getStatusStyle(investment.investmentStatus)}`}
+						title={investment.investmentStatus}
+					>
+						<span
+							className={`size-1.5 rounded-full ${investment.investmentStatus === 'Active' ? 'bg-emerald-500' : investment.investmentStatus === 'Completed' ? 'bg-blue-500' : 'bg-red-400'}`}
+						/>
+						{investment.investmentStatus}
+					</span>
+				);
+			},
+		}),
+	]);
 
-	// eslint-disable-next-line react-hooks/incompatible-library
-	const table = useReactTable({
+	const table = useTable({
+		features,
 		data: investmentsData,
 		columns,
-		state: { globalFilter: debouncedFilter },
+		state: {
+			globalFilter: debouncedFilter,
+			pagination,
+		},
+		globalFilterFn: filterFn_includesString,
 		onGlobalFilterChange: setGlobalFilter,
-		getCoreRowModel: getCoreRowModel(),
-		getFilteredRowModel: getFilteredRowModel(),
-		getPaginationRowModel: getPaginationRowModel(),
-		initialState: { pagination: { pageSize: 5 } },
+		onPaginationChange: setPagination,
 	});
 
 	if (isLoading) {
@@ -221,7 +246,7 @@ const InvestmentList = () => {
 			<div className='flex flex-col xl:flex-row xl:items-center justify-between gap-4 border-b border-zinc-100 dark:border-zinc-800/30 pb-2'>
 				<div>
 					<h3 className='text-sm font-semibold text-zinc-900 dark:text-zinc-50'>
-						Investment Records ({table.getCoreRowModel().rows.length} plan allocation{table.getCoreRowModel().rows.length > 1 ? 's' : ''})
+						Investment Records ({table.getRowModel().rows.length} plan allocation{table.getRowModel().rows.length > 1 ? 's' : ''})
 					</h3>
 					<p className='text-[11px] text-zinc-400 mt-0.5 mb-4'>
 						Track your history of investments.
