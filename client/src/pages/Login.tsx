@@ -35,7 +35,7 @@ const Login = () => {
 
     return (
         <>
-            <title>Login | Nexachain AI</title>
+            <title>Login | YieldNexus</title>
 
 			<section className='relative flex items-center justify-center min-h-screen p-4 bg-zinc-50 dark:bg-zinc-950 overflow-hidden transition-colors duration-300'>
 
