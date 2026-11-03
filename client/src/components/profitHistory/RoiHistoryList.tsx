@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { useSearchParams } from 'react-router'
-import { createColumnHelper, getCoreRowModel, getFilteredRowModel, getPaginationRowModel, useReactTable } from '@tanstack/react-table'
+import { columnFilteringFeature, columnVisibilityFeature, createColumnHelper, createFilteredRowModel, filterFn_includesString, globalFilteringFeature, rowPaginationFeature, rowSelectionFeature, tableFeatures, useTable, createPaginatedRowModel, type PaginationState, filterFn_equalsString } from '@tanstack/react-table'
 import { useGetRoiHistory } from '../../hooks/useInvestments.ts'
 import { formatCurrency } from '../../utils/format.ts'
 import { format, formatDistanceToNow } from 'date-fns'
@@ -12,7 +12,17 @@ import Input from '../common/Input.tsx'
 
 type FilterStatusTabs = RoiHistoryItem['status'] | 'All';
 
-const columnHelper = createColumnHelper<RoiHistoryItem>();
+const features = tableFeatures({
+    columnFilteringFeature: columnFilteringFeature,
+    globalFilteringFeature: globalFilteringFeature,
+    rowSelectionFeature: rowSelectionFeature,
+    rowPaginationFeature: rowPaginationFeature,
+    columnVisibilityFeature: columnVisibilityFeature,
+    filteredRowModel: createFilteredRowModel(),
+    paginatedRowModel: createPaginatedRowModel(),
+});
+
+const columnHelper = createColumnHelper<typeof features, RoiHistoryItem>();
 
 
 const RoiHistoryList = () => {
@@ -20,6 +30,11 @@ const RoiHistoryList = () => {
 	const [globalFilter, setGlobalFilter] = useState('');
 	const [debouncedFilter, setDebouncedFilter] = useState('');
     const [searchParams, setSearchParams] = useSearchParams();
+	const [pagination, setPagination] = useState<PaginationState>({
+		pageIndex: 0,
+		pageSize: 5
+	});
+
 	const inputRef = useRef<HTMLInputElement>(null);
 
     useEffect(() => {
@@ -79,90 +94,96 @@ const RoiHistoryList = () => {
 		}
 	};
 
-	const columns = useMemo(
-		() => [
-			columnHelper.accessor('investmentReference.planDetails', {
-				header: 'Investment Allocation Details',
-				cell: (info) => (
+	const columns = columnHelper.columns([
+		columnHelper.accessor('investmentReference.planDetails', {
+			header: 'Investment Allocation Details',
+			cell: (info) => {
+				const investmentReference = info.row.original.investmentReference;
+				return (
 					<div className='flex flex-col max-w-xs sm:max-w-sm md:max-w-md'>
 						<span
 							className='font-semibold text-zinc-900 dark:text-zinc-100 line-clamp-1 group-hover:line-clamp-none transition-all duration-300 wrap-break-word'
-							title={info.getValue()}
+							title={investmentReference.planDetails}
 						>
-							{info.getValue() || 'N/A'}
+							{investmentReference.planDetails || 'N/A'}
 						</span>
 						<span className='text-[10px] text-zinc-400 mt-1 font-mono'>
 							ID:{' '}
-							{info.row.original.investmentReference?._id ||
-								'N/A'}
+							{investmentReference._id || 'N/A'}
 						</span>
 					</div>
-				),
-			}),
-			columnHelper.accessor('investmentReference.investmentAmount', {
-				header: 'Capital Invested',
-				cell: (info) => {
-					const amount = info.getValue();
-					return (
-						<span
-							className='font-bold font-mono text-zinc-900 dark:text-zinc-50'
-							title={amount ? formatCurrency(amount) : '0'}
-						>
-							{amount ? formatCurrency(amount) : '—'}
-						</span>
-					);
-				},
-			}),
-			columnHelper.accessor('roiAmount', {
-				header: 'ROI Received',
-				cell: (info) => (
+				)
+			}
+		}),
+		columnHelper.accessor('investmentReference.investmentAmount', {
+			header: 'Capital Invested',
+			cell: (info) => {
+				const amount = info.row.original.investmentReference.investmentAmount;
+				return (
+					<span
+						className='font-bold font-mono text-zinc-900 dark:text-zinc-50'
+						title={amount ? formatCurrency(amount) : '0'}
+					>
+						{amount ? formatCurrency(amount) : '—'}
+					</span>
+				);
+			},
+		}),
+		columnHelper.accessor('roiAmount', {
+			header: 'ROI Received',
+			cell: (info) => {
+				const roiAmount = info.row.original.roiAmount;
+				return (
 					<span
 						className='font-bold font-mono text-emerald-600 dark:text-emerald-400'
-						title={formatCurrency(info.getValue())}
+						title={formatCurrency(roiAmount)}
 					>
-						+{formatCurrency(info.getValue())}
+						+{formatCurrency(roiAmount)}
 					</span>
-				),
-			}),
-			columnHelper.accessor('createdAt', {
-				header: 'Date Received',
-				cell: (info) => (
+				)
+			}
+		}),
+		columnHelper.accessor('createdAt', {
+			header: 'Date Received',
+			cell: (info) => {
+				const createdAt = info.row.original.createdAt;
+				return (
 					<div
 						className='flex flex-col text-xs text-zinc-500 dark:text-zinc-400 font-medium'
-						title={format(new Date(info.getValue()), 'PPPPpppp')}
+						title={format(new Date(createdAt), 'PPPPpppp')}
 					>
-						<span>{format(info.getValue(), 'PP')}</span>
+						<span>{format(new Date(createdAt), 'PP')}</span>
 						<span className='text-[10px] text-zinc-400 font-normal mt-0.5'>
 							(
-							{formatDistanceToNow(new Date(info.getValue()), {
-								addSuffix: true,
-								includeSeconds: true,
-							})}
+								{formatDistanceToNow(new Date(createdAt), {
+									addSuffix: true,
+									includeSeconds: true,
+								})}
 							)
 						</span>
 					</div>
-				),
-			}),
-			columnHelper.accessor('status', {
-				header: 'Status',
-				cell: (info) => {
-					const status = info.getValue();
-					return (
+				)
+			},
+		}),
+		columnHelper.accessor('status', {
+			header: 'Status',
+			filterFn: filterFn_equalsString,
+			cell: (info) => {
+				const status = info.row.original.status;
+				return (
+					<span
+						className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-medium border ${getStatusStyle(status)}`}
+						title={status}
+					>
 						<span
-							className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-medium border ${getStatusStyle(status)}`}
-							title={status}
-						>
-							<span
-								className={`size-1.5 rounded-full ${status === 'Processed' ? 'bg-emerald-500' : status === 'Pending' ? 'bg-blue-500' : 'bg-red-400'}`}
-							/>
-							{status}
-						</span>
-					);
-				},
-			}),
-		],
-		[],
-	);
+							className={`size-1.5 rounded-full ${status === 'Processed' ? 'bg-emerald-500' : status === 'Pending' ? 'bg-blue-500' : 'bg-red-400'}`}
+						/>
+						{status}
+					</span>
+				);
+			},
+		}),
+	]);
 
 	// Derived filtering state generated directly from url tracking variables
 	const tableFilters = useMemo(() => {
@@ -175,19 +196,18 @@ const RoiHistoryList = () => {
 		return filters;
 	}, [currentStatus]);
     
-	// eslint-disable-next-line react-hooks/incompatible-library
-	const table = useReactTable({
+	const table = useTable({
+		features,
 		data: roiHistoryData,
 		columns,
 		state: {
             globalFilter: debouncedFilter,
 			columnFilters: tableFilters,
+			pagination,
 		},
-        onGlobalFilterChange: setGlobalFilter,
-		getCoreRowModel: getCoreRowModel(),
-		getFilteredRowModel: getFilteredRowModel(),
-		getPaginationRowModel: getPaginationRowModel(),
-		initialState: { pagination: { pageSize: 5 } },
+        globalFilterFn: filterFn_includesString,
+		onGlobalFilterChange: setGlobalFilter,
+		onPaginationChange: setPagination,
 	});
 
 	if (isLoading) {
