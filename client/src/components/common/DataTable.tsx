@@ -1,23 +1,26 @@
-import { flexRender, type Table } from '@tanstack/react-table'
+import { type ReactTable } from '@tanstack/react-table'
 import { ChevronLeft, ChevronRight } from 'lucide-react'
 
 
-export interface DataTableProps<T> {
-	table: Table<T>;
+export interface DataTableProps<TTable> {
+	table: TTable;
 	emptyStateMessage?: string;
 	showPagination?: boolean;
 }
 
 
-const DataTable = <T,>({
+const DataTable = <TTable,>({
 	table,
 	emptyStateMessage = 'No records found.',
 	showPagination = true
-}: DataTableProps<T>) => {
+}: DataTableProps<TTable>) => {
 
-	const headerGroups = table.getHeaderGroups();
-	const rows = table.getRowModel().rows;
-	const columnsCount = table.getVisibleFlatColumns().length;
+	// eslint-disable-next-line @typescript-eslint/no-explicit-any
+	const tableApi = table as ReactTable<any, any>;
+
+	const headerGroups = tableApi.getHeaderGroups();
+	const rows = tableApi.getRowModel().rows;
+	const columnsCount = tableApi.getVisibleFlatColumns().length;
 
 	return (
 		<div className='overflow-hidden rounded-2xl border border-zinc-100 dark:border-zinc-800/80 bg-white dark:bg-zinc-900/20 backdrop-blur-sm shadow-sm'>
@@ -37,10 +40,7 @@ const DataTable = <T,>({
 									>
 										{header.isPlaceholder
 											? null
-											: flexRender(
-													header.column.columnDef.header,
-													header.getContext(),
-											)
+											: <tableApi.FlexRender header={header} />
                                         }
 									</th>
 								))}
@@ -59,10 +59,7 @@ const DataTable = <T,>({
 											key={cell.id}
 											className='px-6 py-4 text-sm whitespace-nowrap'
 										>
-											{flexRender(
-												cell.column.columnDef.cell,
-												cell.getContext(),
-											)}
+											<tableApi.FlexRender cell={cell} />
 										</td>
 									))}
 								</tr>
@@ -87,15 +84,15 @@ const DataTable = <T,>({
 					<div className='flex items-center gap-1'>
 						<span>Page</span>
 						<strong className='font-bold text-zinc-700 dark:text-zinc-300'>
-							{table.getState().pagination.pageIndex + 1} of{' '}
-							{table.getPageCount()}
+							{tableApi.state.pagination.pageIndex + 1} of{' '}
+							{tableApi.getPageCount()}
 						</strong>
 					</div>
 					<div className='flex items-center gap-2'>
 						<button
 							type='button'
-							onClick={() => table.previousPage()}
-							disabled={!table.getCanPreviousPage()}
+							onClick={() => tableApi.previousPage()}
+							disabled={!tableApi.getCanPreviousPage()}
 							className='p-1.5 rounded-lg border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-zinc-600 dark:text-zinc-300 disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer'
 							title='Previous'
 						>
@@ -103,8 +100,8 @@ const DataTable = <T,>({
 						</button>
 						<button
 							type='button'
-							onClick={() => table.nextPage()}
-							disabled={!table.getCanNextPage()}
+							onClick={() => tableApi.nextPage()}
+							disabled={!tableApi.getCanNextPage()}
 							className='p-1.5 rounded-lg border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-zinc-600 dark:text-zinc-300 disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer'
 							title='Next'
 						>

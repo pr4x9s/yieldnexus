@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { createColumnHelper, getCoreRowModel, getFilteredRowModel, getPaginationRowModel, useReactTable } from '@tanstack/react-table'
+import { columnFilteringFeature, columnVisibilityFeature, createColumnHelper, createFilteredRowModel, filterFn_includesString, globalFilteringFeature, rowPaginationFeature, rowSelectionFeature, tableFeatures, useTable, createPaginatedRowModel, type PaginationState } from '@tanstack/react-table'
 import { useGetReferralIncomeHistory } from '../../hooks/useDashboardData.ts'
 import { formatCurrency } from '../../utils/format.ts'
 import { format, formatDistanceToNow } from 'date-fns'
@@ -9,13 +9,28 @@ import DataTable from '../common/DataTable.tsx'
 import Input from '../common/Input.tsx'
 
 
-const columnHelper = createColumnHelper<ReferralIncomeItem>();
+const features = tableFeatures({
+    columnFilteringFeature: columnFilteringFeature,
+    globalFilteringFeature: globalFilteringFeature,
+    rowSelectionFeature: rowSelectionFeature,
+    rowPaginationFeature: rowPaginationFeature,
+    columnVisibilityFeature: columnVisibilityFeature,
+    filteredRowModel: createFilteredRowModel(),
+    paginatedRowModel: createPaginatedRowModel(),
+});
+
+const columnHelper = createColumnHelper<typeof features, ReferralIncomeItem>();
 
 
 const ReferralIncomeList = () => {
 
 	const [globalFilter, setGlobalFilter] = useState('');
 	const [debouncedFilter, setDebouncedFilter] = useState('');
+	const [pagination, setPagination] = useState<PaginationState>({
+		pageIndex: 0,
+		pageSize: 5
+	});
+
 	const inputRef = useRef<HTMLInputElement>(null);
 
 	useEffect(() => {
@@ -30,86 +45,93 @@ const ReferralIncomeList = () => {
 
 	const levelIncomeData = useMemo(() => apiResponse?.data || [], [apiResponse]);
 
-	const columns = useMemo(
-		() => [
-			columnHelper.accessor('userWhoGenerated.fullName', {
-				header: 'Ref. User',
-				cell: (info) => (
+	const columns = columnHelper.columns([
+		columnHelper.accessor('userWhoGenerated.fullName', {
+			header: 'Ref. User',
+			cell: (info) => {
+				const userWhoGenerated = info.row.original.userWhoGenerated;
+				return (
 					<div className='flex flex-col'>
 						<span
 							className='font-semibold text-zinc-900 dark:text-zinc-100'
-							title={info.getValue()}
+							title={userWhoGenerated.fullName}
 						>
-							{info.getValue() || 'System Baseline Account'}
+							{userWhoGenerated.fullName || 'System Baseline Account'}
 						</span>
 						<a
-							href={`mailto:${info.row.original.userWhoGenerated.email}`}
+							href={`mailto:${userWhoGenerated.email}`}
 							target='_blank'
 							className='text-[10px] text-blue-500 dark:text-blue-400 font-mono mt-0.5 hover:underline'
 						>
-							{info.row.original.userWhoGenerated.email}
+							{userWhoGenerated.email}
 						</a>
 					</div>
-				),
-			}),
-			columnHelper.accessor('referralLevel', {
-				header: 'Referral Level',
-				cell: (info) => {
-					const level = info.getValue();
-					return (
-						<span
-							className='inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold border bg-indigo-500/10 border-indigo-500/20 text-indigo-600 dark:text-indigo-400 font-mono tracking-wide'
-							title={`Level ${level}`}
-						>
-							Lvl {level}
-						</span>
-					);
-				},
-			}),
-			columnHelper.accessor('incomeAmount', {
-				header: 'Income Earned',
-				cell: (info) => (
+				)
+			},
+		}),
+		columnHelper.accessor('referralLevel', {
+			header: 'Referral Level',
+			cell: (info) => {
+				const level = info.row.original.referralLevel;
+				return (
+					<span
+						className='inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold border bg-indigo-500/10 border-indigo-500/20 text-indigo-600 dark:text-indigo-400 font-mono tracking-wide'
+						title={`Level ${level}`}
+					>
+						Lvl {level}
+					</span>
+				);
+			},
+		}),
+		columnHelper.accessor('incomeAmount', {
+			header: 'Income Earned',
+			cell: (info) => {
+				const incomeAmount = info.row.original.incomeAmount;
+				return (
 					<span
 						className='font-bold font-mono text-emerald-600 dark:text-emerald-400'
-						title={formatCurrency(info.getValue())}
+						title={formatCurrency(incomeAmount)}
 					>
-						+{formatCurrency(info.getValue())}
+						+{formatCurrency(incomeAmount)}
 					</span>
-				),
-			}),
-			columnHelper.accessor('createdAt', {
-				header: 'Date Received',
-				cell: (info) => (
+				)
+			},
+		}),
+		columnHelper.accessor('createdAt', {
+			header: 'Date Received',
+			cell: (info) => {
+				const createdAt = info.row.original.createdAt;
+				return (
 					<div
 						className='flex flex-col text-xs text-zinc-500 dark:text-zinc-400 font-medium'
-						title={format(new Date(info.getValue()), 'PPPPpppp')}
+						title={format(new Date(createdAt), 'PPPPpppp')}
 					>
-						<span>{format(new Date(info.getValue()), 'PP')}</span>
+						<span>{format(new Date(createdAt), 'PP')}</span>
 						<span className='text-[10px] text-zinc-400 font-normal mt-0.5'>
 							(
-							{formatDistanceToNow(new Date(info.getValue()), {
-								addSuffix: true,
-								includeSeconds: true,
-							})}
+								{formatDistanceToNow(new Date(createdAt), {
+									addSuffix: true,
+									includeSeconds: true,
+								})}
 							)
 						</span>
 					</div>
-				),
-			}),
-		],
-		[],
-	);
+				)
+			},
+		}),
+	]);
 
-	// eslint-disable-next-line react-hooks/incompatible-library
-	const table = useReactTable({
+	const table = useTable({
+		features,
 		data: levelIncomeData,
 		columns,
-		state: { globalFilter: debouncedFilter },
+		state: {
+			globalFilter: debouncedFilter,
+			pagination,
+		},
+		globalFilterFn: filterFn_includesString,
 		onGlobalFilterChange: setGlobalFilter,
-		getCoreRowModel: getCoreRowModel(),
-		getFilteredRowModel: getFilteredRowModel(),
-		getPaginationRowModel: getPaginationRowModel(),
-		initialState: { pagination: { pageSize: 5 } },
+		onPaginationChange: setPagination,
 	});
 
 	if (isLoading) {

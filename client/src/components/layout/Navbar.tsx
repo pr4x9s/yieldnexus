@@ -1,4 +1,4 @@
-import { Menu, Sun, Moon, LogOut, Settings, Check, Copy } from 'lucide-react'
+import { Menu, Sun, Moon, LogOut, Check, Copy } from 'lucide-react'
 import { useAuthStore } from '../../store/authStore.ts'
 import { useThemeStore } from '../../store/themeStore.ts'
 import { Link } from 'react-router'
@@ -166,7 +166,7 @@ const Navbar = ({ onMenuClick }: NavbarProps) => {
 								)}
 							</div>
 
-							<div className='p-1.5 space-y-0.5'>
+							{/* <div className='p-1.5 space-y-0.5'>
 								<Link
 									to='/dashboard/home'
 									onClick={() => setIsDropdownOpen(false)}
@@ -179,9 +179,10 @@ const Navbar = ({ onMenuClick }: NavbarProps) => {
 									/>
 									<span>System Settings</span>
 								</Link>
-							</div>
+							</div> */}
 
-							<div className='p-1.5 border-t border-zinc-100 dark:border-zinc-800 bg-zinc-50/30 dark:bg-zinc-950/10'>
+							{/* <div className='p-1.5 border-t border-zinc-100 dark:border-zinc-800 bg-zinc-50/30 dark:bg-zinc-950/10'> */}
+							<div className='p-1.5 bg-zinc-50/30 dark:bg-zinc-950/10'>
 								<button
 									onClick={() => {
 										setIsDropdownOpen(false);

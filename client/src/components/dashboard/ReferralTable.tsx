@@ -1,5 +1,5 @@
 import { useState, useMemo, useRef, useEffect } from 'react'
-import { createColumnHelper, getCoreRowModel, getFilteredRowModel, getPaginationRowModel, useReactTable } from '@tanstack/react-table'
+import { columnFilteringFeature, columnVisibilityFeature, createColumnHelper, createFilteredRowModel, filterFn_includesString, globalFilteringFeature, rowPaginationFeature, rowSelectionFeature, tableFeatures, useTable, createPaginatedRowModel, type PaginationState } from '@tanstack/react-table'
 import { useDirectReferrals } from '../../hooks/useDashboardData.ts'
 import { formatCurrency } from '../../utils/format.ts'
 import { format, formatDistanceToNow } from 'date-fns'
@@ -10,12 +10,27 @@ import Input from '../common/Input.tsx'
 
 
 
-const columnHelper = createColumnHelper<DirectReferralUser>();
+const features = tableFeatures({
+    columnFilteringFeature: columnFilteringFeature,
+    globalFilteringFeature: globalFilteringFeature,
+    rowSelectionFeature: rowSelectionFeature,
+    rowPaginationFeature: rowPaginationFeature,
+    columnVisibilityFeature: columnVisibilityFeature,
+    filteredRowModel: createFilteredRowModel(),
+    paginatedRowModel: createPaginatedRowModel(),
+});
+
+const columnHelper = createColumnHelper<typeof features, DirectReferralUser>();
 
 const ReferralTable = () => {
     const { data: apiResponse, isLoading, isError } = useDirectReferrals();
-    const [globalFilter, setGlobalFilter] = useState('');
-    const [debouncedFilter, setDebouncedFilter] = useState('');
+    const [globalFilter, setGlobalFilter] = useState<string>('');
+    const [debouncedFilter, setDebouncedFilter] = useState<string>('');
+    const [pagination, setPagination] = useState<PaginationState>({
+        pageIndex: 0,
+        pageSize: 5
+    });
+    
     const inputRef = useRef<HTMLInputElement>(null);
 
     useEffect(() => {
@@ -30,51 +45,60 @@ const ReferralTable = () => {
     const referralsData = useMemo(() => apiResponse?.data || [], [apiResponse]);
 
     // Define columns
-    const columns = useMemo(() => [
+    const columns = columnHelper.columns([
         columnHelper.accessor('fullName', {
             header: 'User',
-            cell: (info) => (
-                <div className='flex flex-col'>
-                    <span
-                        className='font-semibold text-zinc-900 dark:text-zinc-100'
-                        title={info.getValue()}
-                    >
-                        {info.getValue()}
-                    </span>
-                </div>
-            ),
+            cell: (info) => {
+                const user = info.row.original;
+                return (
+                    <div className='flex flex-col'>
+                        <span
+                            className='font-semibold text-zinc-900 dark:text-zinc-100'
+                            title={user.fullName}
+                        >
+                            {user.fullName}
+                        </span>
+                    </div>
+                );
+            },
         }),
         columnHelper.accessor('email', {
             header: 'Email',
-            cell: (info) => (
-                <a
-                    href={`mailto:${info.getValue()}`}
-                    target='_blank'
-                    className='font-mono text-blue-500 dark:text-blue-400'
-                    title={info.getValue()}
-                >
-                    {info.getValue()}
-                </a>
-            ),
+            cell: (info) => {
+                const user = info.row.original;
+                return (
+                    <a
+                        href={`mailto:${user.email}`}
+                        target='_blank'
+                        className='font-mono text-blue-500 dark:text-blue-400'
+                        title={user.email}
+                    >
+                        {user.email}
+                    </a>
+                );
+            },
         }),
         columnHelper.accessor('mobileNumber', {
             header: 'Mobile Number',
-            cell: (info) => (
-                <a
-                    href={`tel:${info.getValue()}`}
-                    target='_blank'
-                    className='font-mono text-blue-500 dark:text-blue-400'
-                    title={info.getValue()}
-                >
-                    {info.getValue()}
-                </a>
-            )
+            cell: (info) => {
+                const user = info.row.original;
+                return (
+                    <a
+                        href={`tel:${user.mobileNumber}`}
+                        target='_blank'
+                        className='font-mono text-blue-500 dark:text-blue-400'
+                        title={user.mobileNumber}
+                    >
+                        {user.mobileNumber}
+                    </a>
+                );
+            },
         }),
         columnHelper.accessor('accountStatus', {
             header: 'Status',
             cell: (info) => {
-                const status = info.getValue();
-                const isItemActive = status === 'Active';
+                const user = info.row.original;
+                const isItemActive = user.accountStatus === 'Active';
                 return (
                     <span
                         className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-medium border ${
@@ -82,48 +106,55 @@ const ReferralTable = () => {
                             ? 'bg-emerald-500/10 border-emerald-500/20 text-emerald-600 dark:text-emerald-400' 
                             : 'bg-zinc-500/10 border-zinc-500/20 text-zinc-500'
                         }`}
-                        title={info.getValue()}
+                        title={user.accountStatus}
                     >
                         <span className={`size-1.5 rounded-full ${isItemActive ? 'bg-emerald-500' : 'bg-zinc-400'}`} />
-                        {status}
+                        {user.accountStatus}
                     </span>
                 );
             },
         }),
         columnHelper.accessor('walletBalance', {
             header: 'Wallet Balance',
-            cell: (info) => (
-                <span
-                    className='font-bold font-mono text-zinc-900 dark:text-zinc-50'
-                    title={formatCurrency(info.getValue())}
-                >
-                    {formatCurrency(info.getValue())}
-                </span>
+            cell: (info) => {
+                const user = info.row.original;
+                return (
+                    <span
+                        className='font-bold font-mono text-zinc-900 dark:text-zinc-50'
+                        title={formatCurrency(user.walletBalance)}
+                    >
+                        {formatCurrency(user.walletBalance)}
+                    </span>
             )
+            }
         }),
         columnHelper.accessor('createdAt', {
             header: 'Registration Date',
-            cell: (info) => (
-                <span
-                    className='text-zinc-400'
-                    title={format(info.getValue(), 'PPPPpppp')}
-                >
-                    {format(info.getValue(), 'PPp')}{' '}({formatDistanceToNow(new Date(info.getValue()), { addSuffix: true, includeSeconds: true })})
-                </span>
-            ),
+            cell: (info) => {
+                const user = info.row.original;
+                return (
+                    <span
+                        className='text-zinc-400'
+                        title={format(user.createdAt, 'PPPPpppp')}
+                    >
+                        {format(user.createdAt, 'PPp')}{' '}({formatDistanceToNow(new Date(user.createdAt), { addSuffix: true, includeSeconds: true })})
+                    </span>
+            )
+            },
         }),
-    ], []);
+    ]);
 
-    // eslint-disable-next-line react-hooks/incompatible-library
-    const table = useReactTable({
-        data: referralsData,
+    const table = useTable({
+        features,
+        data: referralsData ?? [],
         columns,
-        state: { globalFilter: debouncedFilter },
+        state: {
+            globalFilter: debouncedFilter,
+            pagination,
+        },
+        globalFilterFn: filterFn_includesString,
         onGlobalFilterChange: setGlobalFilter,
-        getCoreRowModel: getCoreRowModel(),
-        getFilteredRowModel: getFilteredRowModel(),
-        getPaginationRowModel: getPaginationRowModel(),
-        initialState: { pagination: { pageSize: 5 } }
+        onPaginationChange: setPagination,
     });
 
     if (isLoading) {
