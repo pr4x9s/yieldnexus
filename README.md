@@ -50,7 +50,7 @@ VITE_SERVER_URL=http://127.0.0.1:8000/api/v1
 ## 🚀 Local Installation & Execution Steps
 
 ### 1. Project Initialization
-Clone the repository: [https://github.com/undefinedx96/nexachain-mern-assessment.git](https://github.com/undefinedx96/nexachain-mern-assessment.git)
+Clone the repository: [https://github.com/pr4x9s/yieldnexus.git](https://github.com/pr4x9s/yieldnexus.git)
 ### 2. Launch the Backend API Instance
 ```bash
 cd server
@@ -120,7 +120,7 @@ _Also available as **Swagger OpenAPI** Docs at `/docs` and **Postman Collection*
 | **POST** | `/admin/payout/trigger` | Protected (Admin) | *Testing Utility Only:* Manually triggers the automated daily cron distribution cycle. |
 
 ### 🧪 Sample Request and Response Data
-[Sample Request and Response Data Here](https://github.com/undefinedx96/nexachain-mern-assessment/tree/main/server#readme)
+[Sample Request and Response Data Here](https://github.com/pr4x9s/yieldnexus/tree/main/server#readme)
 
 ---
 
