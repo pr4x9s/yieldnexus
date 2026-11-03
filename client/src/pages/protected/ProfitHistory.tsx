@@ -35,7 +35,7 @@ const ProfitHistory = () => {
 
     return (
         <>
-            <title>Profit History | Nexachain AI</title>
+            <title>Profit History | YieldNexus</title>
 
             <div className='max-w-[1600px] mx-auto p-4 md:p-6 lg:p-8 space-y-6'>
                 <div>

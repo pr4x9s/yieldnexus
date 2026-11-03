@@ -12,7 +12,7 @@ const Home = () => {
 
 	return (
 		<>
-			<title>Overview | Nexachain AI</title>
+			<title>Overview | YieldNexus</title>
 
 			<div className='max-w-[1600px] mx-auto p-4 md:p-6 lg:p-8 space-y-2'>
 				<h1 className='text-3xl md:text-4xl lg:text-5xl font-normal text-zinc-900 dark:text-zinc-50'>
