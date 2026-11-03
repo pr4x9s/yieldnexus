@@ -30,7 +30,7 @@ const Register = () => {
 
             <section className='relative flex items-center justify-center min-h-screen p-4 bg-zinc-50 dark:bg-zinc-950 overflow-hidden transition-colors duration-300'>
 
-                <div className='w-full max-w-md p-8 bg-white/80 dark:bg-zinc-900/80 backdrop-blur-xl rounded-2xl border border-zinc-200/80 dark:border-zinc-800/80 shadow-2xl transition-all duration-300'>
+                <div className='w-full max-w-4xl p-8 bg-white/80 dark:bg-zinc-900/80 backdrop-blur-xl rounded-2xl border border-zinc-200/80 dark:border-zinc-800/80 shadow-2xl transition-all duration-300'>
                     
                     {/* header */}
                     <div className='text-center mb-8'>
