@@ -90,7 +90,7 @@ const Navbar = ({ onMenuClick }: NavbarProps) => {
 								/>
 							</div> */}
 							<span className='text-zinc-900 dark:text-zinc-100'>
-								Nexachain AI
+								YieldNexus
 							</span>
 						</div>
 					</Link>
